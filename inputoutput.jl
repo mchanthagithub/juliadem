@@ -1,13 +1,5 @@
 using CSV
-
-mutable struct GrainData
-    q
-    r
-    v
-    fixed
-    rho
-    num_grains
-end
+include("grainstruct.jl")
 
 function readInputCSV(file_name)
     csv_reader = CSV.File(file_name,header=0)
@@ -110,15 +102,17 @@ function writeOutputVTU(file_name,grain_data)
     end
 end
 
-
-x,y,theta,r,vx,vy,omega,fixed,rho = readInputCSV("testinput.csv")
-q = [x y theta]'[:]
-v = [vx vy omega]'[:]
-grain_data = GrainData(q,r,v,fixed,rho,length(x))
-println("q: ",grain_data.q)
-println("r: ",grain_data.r)
-println("v: ",grain_data.v)
-println("fixed: ",grain_data.fixed)
-println("rho: ",grain_data.rho)
-
-writeOutputVTU("testoutput.vtu",grain_data)
+function determineOutputFileName(prefix,postfix,max_num_of_outputs,output_num)
+    max_num_of_digits = Int32(floor(log10(max_num_of_outputs)+1))
+    if(output_num == 0)
+        output_num_of_digits = 1
+    else
+        output_num_of_digits = Int32(floor(log10(output_num)+1))
+    end
+    num_of_leading_zeros = max_num_of_digits - output_num_of_digits
+    file_name = prefix*(("0")^num_of_leading_zeros)*string(output_num)*postfix
+    #println("max num digits: $(max_num_of_digits) num: $(max_num_of_outputs)")
+    #println("output num digits: $(output_num_of_digits) num: $(output_num)")
+    println(file_name)
+    return file_name
+end
