@@ -87,6 +87,8 @@ function writeOutputVTU(file_name,grain_data)
         writeScalerToVTU(file,"Rho","Float32",grain_data.rho) 
         writeVectorToVTU(file,"Velocity","Float32",grain_data.v,grain_data.num_grains,2,3) 
         writeScalerToVTU(file,"Omega","Float32",grain_data.v[3:3:end]) 
+        writeVectorToVTU(file,"Mass","Float32",grain_data.m,grain_data.num_grains,2,3) 
+        writeScalerToVTU(file,"MomentOfInertia","Float32",grain_data.m[3:3:end]) 
         write(file,"   </PointData>\n")
         write(file,"   <Cells>\n")
         write(file,"    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n")
@@ -101,6 +103,46 @@ function writeOutputVTU(file_name,grain_data)
         write(file,"</VTKFile>\n")
     end
 end
+
+function writeForcesOutputVTU(file_name,grain_data,collision_forces)
+    open(file_name,"w") do file
+        write(file,"<?xml version=\"1.0\"?>\n")
+        write(file,"<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">\n")
+        write(file," <UnstructuredGrid>\n")
+        write(file,"  <Piece NumberOfPoints=\"$(grain_data.num_grains)\" NumberOfCells=\"0\">\n")
+        write(file,"   <Points>\n")
+        write(file,"    <DataArray name=\"Position\" type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n")
+        for kk in 1:grain_data.num_grains
+             write(file,"$(grain_data.q[(kk-1)*3+1]) $(grain_data.q[(kk-1)*3+2]) 0.0\n")
+        end
+        write(file,"    </DataArray>\n")
+        write(file,"   </Points>\n")
+        write(file,"   <PointData Scalars=\"scalars\">\n")
+        writeVectorToVTU(file,"Position","Float32",grain_data.q,grain_data.num_grains,2,3) 
+        writeScalerToVTU(file,"Theta","Float32",grain_data.q[3:3:end]) 
+        writeScalerToVTU(file,"Radius","Float32",grain_data.r) 
+        writeScalerToVTU(file,"Fixed","Int32",Int32[x ? 1 : 0 for x in grain_data.fixed]) # Need to convert bool to ints
+        writeScalerToVTU(file,"Rho","Float32",grain_data.rho) 
+        writeVectorToVTU(file,"Velocity","Float32",grain_data.v,grain_data.num_grains,2,3) 
+        writeScalerToVTU(file,"Omega","Float32",grain_data.v[3:3:end]) 
+        writeVectorToVTU(file,"Mass","Float32",grain_data.m,grain_data.num_grains,2,3) 
+        writeScalerToVTU(file,"MomentOfInertia","Float32",grain_data.m[3:3:end]) 
+        write(file,"   </PointData>\n")
+        write(file,"   <Cells>\n")
+        write(file,"    <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">\n")
+        write(file,"    </DataArray>\n")
+        write(file,"    <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">\n")
+        write(file,"    </DataArray>\n")
+        write(file,"    <DataArray type=\"Int32\" Name=\"types\" format=\"ascii\">\n")
+        write(file,"    </DataArray>\n")
+        write(file,"   </Cells>\n")
+        write(file,"  </Piece>\n")
+        write(file," </UnstructuredGrid>\n")
+        write(file,"</VTKFile>\n")
+    end
+end
+
+
 
 function determineOutputFileName(prefix,postfix,max_num_of_outputs,output_num)
     max_num_of_digits = Int32(floor(log10(max_num_of_outputs)+1))
