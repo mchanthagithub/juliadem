@@ -14,7 +14,7 @@ function readInputCSV(file_name)
     vx = csv_reader.Column5
     vy = csv_reader.Column6
     omega = csv_reader.Column7
-    fixed = csv_reader.Column8
+    fixed = !=(0).(csv_reader.Column8) # Need to convert the 1 and 0 to bools
     rho = csv_reader.Column9
 
     return x,y,theta,r,vx,vy,omega,fixed,rho
@@ -83,7 +83,7 @@ function writeOutputVTU(file_name,grain_data)
         writeVectorToVTU(file,"Position","Float32",grain_data.q,grain_data.num_grains,2,3) 
         writeScalerToVTU(file,"Theta","Float32",grain_data.q[3:3:end]) 
         writeScalerToVTU(file,"Radius","Float32",grain_data.r) 
-        writeScalerToVTU(file,"Fixed","Int32",grain_data.fixed) 
+        writeScalerToVTU(file,"Fixed","Int32",Int32[x ? 1 : 0 for x in grain_data.fixed]) # Need to convert bool to ints
         writeScalerToVTU(file,"Rho","Float32",grain_data.rho) 
         writeVectorToVTU(file,"Velocity","Float32",grain_data.v,grain_data.num_grains,2,3) 
         writeScalerToVTU(file,"Omega","Float32",grain_data.v[3:3:end]) 
