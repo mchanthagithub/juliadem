@@ -16,6 +16,11 @@ function detectCollisionsSimple(grain_data)
         for check_grain_idx = grain_idx+1:grain_data.num_grains
             grain_map_idx = (grain_idx-1)*3
             check_grain_map_idx = (check_grain_idx-1)*3
+            # If both grains are fixed then dont add collision
+            if(grain_data.fixed[grain_idx] && grain_data.fixed[check_grain_idx])
+                continue
+            end
+
             x_diff = grain_data.q[grain_map_idx+1]-grain_data.q[check_grain_map_idx+1]
             y_diff = grain_data.q[grain_map_idx+2]-grain_data.q[check_grain_map_idx+2]
             dist = sqrt( x_diff*x_diff + y_diff*y_diff )
@@ -36,7 +41,7 @@ function detectCollisionsSimple(grain_data)
                 map_idx_1 = (idx_1-1)*3
                 n = [ (grain_data.q[map_idx_1+1] - grain_data.q[map_idx_0+1]) (grain_data.q[map_idx_1+2] - grain_data.q[map_idx_0+2])]
                 pen_depth = (grain_data.r[grain_idx]+grain_data.r[check_grain_idx]) - dist
-                new_collision = Collision(idx_0,idx_1,n,pen_depth,grain_data.fixed[idx_0],grain_data.fixed[idx_1])
+                new_collision = Collision(idx_0,idx_1,n,pen_depth)
                 push!(collision_array,new_collision)
             end
         end
@@ -144,7 +149,7 @@ function main(args)
         t += delta_t
         if(ctr%num_of_steps_per_output == 0)
             output_num += 1
-            println(ctr," ",t)
+            println(ctr," ",t," ",length(collisions))
             output_file_name = determineOutputFileName("config_",".vtu",max_num_of_outputs,output_num)
             writeOutputVTU(output_file_name,grain_data)
         end
