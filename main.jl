@@ -16,7 +16,7 @@ function main(args)
         end
     end
     #k_n = 1000000.0
-    k_n = 10000000.0
+    k_n = 1000000.0
     x,y,theta,r,vx,vy,omega,fixed,rho = readInputCSV(input_file_name)
     q = [x y theta]'[:]
     v = [vx vy omega]'[:]
@@ -55,7 +55,7 @@ function main(args)
         collisions = detectCollisionsSimple(grain_data)
         
         # Calculate collision forces
-        forces = calculateCollisionForces(grain_data, collisions)
+        forces = calculateCollisionForces!(grain_data, collisions)
 
         # Apply gravity
         f_g_x = grain_data.m[1:3:end].*g[1]
@@ -83,6 +83,8 @@ function main(args)
             println(ctr," ",t," ",length(collisions))
             output_file_name = determineOutputFileName("config_",".vtu",max_num_of_outputs,output_num)
             writeOutputVTU(output_file_name,grain_data)
+            force_output_file_name = determineOutputFileName("force_",".vtu",max_num_of_outputs,output_num)
+            writeForcesOutputVTU(force_output_file_name,grain_data,collisions)
         end
     end
 end

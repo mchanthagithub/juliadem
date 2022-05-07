@@ -1,12 +1,15 @@
 include("grainstruct.jl")
+using LinearAlgebra
 
-struct Collision
+mutable struct Collision
     # always have it so idx_0 < idx_1
     idx_0
     idx_1
     # Collision normal points from idx0 to idx1 
     n # 2 vector, collision normal
     pen_depth # float, penetration depth
+    location # 2 vector, collision location
+    force # 3 vector, fx, fy, torque
 end
 
 
@@ -41,8 +44,10 @@ function detectCollisionsSimple(grain_data)
                 map_idx_0 = (idx_0-1)*3
                 map_idx_1 = (idx_1-1)*3
                 n = [ (grain_data.q[map_idx_1+1] - grain_data.q[map_idx_0+1]) (grain_data.q[map_idx_1+2] - grain_data.q[map_idx_0+2])]
+                n = normalize(n)
                 pen_depth = (grain_data.r[grain_idx]+grain_data.r[check_grain_idx]) - dist
-                new_collision = Collision(idx_0,idx_1,n,pen_depth)
+                location = [0.5*(grain_data.q[map_idx_1+1] + grain_data.q[map_idx_0+1]) 0.5*(grain_data.q[map_idx_1+2] + grain_data.q[map_idx_0+2]) ]
+                new_collision = Collision(idx_0,idx_1,n,pen_depth,location,[0.0,0.0,0.0])
                 push!(collision_array,new_collision)
             end
         end
@@ -50,7 +55,7 @@ function detectCollisionsSimple(grain_data)
     return collision_array
 end
 
-function calculateCollisionForces(grain_data, collision_array)
+function calculateCollisionForces!(grain_data, collision_array)
     collision_forces = 0.0*grain_data.v
     num_of_collisions = length(collision_array)
      
@@ -66,7 +71,7 @@ function calculateCollisionForces(grain_data, collision_array)
        # Apply collision force to overall force vector
        collision_forces[map_idx_1+1:map_idx_1+2] += normal_force'
        collision_forces[map_idx_0+1:map_idx_0+2] -= normal_force'
-
+       collision.force = [normal_force[1], normal_force[2], 0.0]
     end
 
     return collision_forces

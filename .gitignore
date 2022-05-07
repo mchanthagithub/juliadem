@@ -1,2 +1,4 @@
 *.swp
 *.swo
+config*.vtu
+force*.vtu
