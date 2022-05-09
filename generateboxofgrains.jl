@@ -9,8 +9,8 @@ grain_d_mean = grain_r_mean*2.0
 
 # H = Nd^2/A, where A = Lx*Ly, and Lx and Ly are length and width of bottom plane
 # Want H of 40
-H = 20
-Lx = 20 # grain diameters
+H = 16
+Lx = 16 # grain diameters
 N = H*Lx
 
 grain_d_vect = Array{Float64,1}()
