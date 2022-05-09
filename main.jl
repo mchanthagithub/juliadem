@@ -66,15 +66,18 @@ function main(args)
     old_collision_array = Array{Collision,1}() 
     while t < end_t
         # Detect collisions
-        #collisions = detectCollisionsSimple(grain_data,old_collision_array)
+        #@time collisions = detectCollisionsSimple(grain_data,old_collision_array)
+        println("=============================================================")
         collisions = detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width,old_collision_array, delta_t)
+        println("Collisions: ",length(collisions))
         #println("Collisions:")
         #for ii =1:length(collisions)
         #    println(collisions[ii].idx_0,",",collisions[ii].idx_1)
         #end
 
         # Calculate collision forces
-        forces = calculateCollisionForces!(grain_data, collisions,delta_t)
+        println("Forces:")
+        @time forces = calculateCollisionForces!(grain_data, collisions,delta_t)
 
         # Apply gravity
         f_g_x = grain_data.m[1:3:end].*g[1]

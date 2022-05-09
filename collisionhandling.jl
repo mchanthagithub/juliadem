@@ -41,8 +41,8 @@ function detectCollisionsSimple(grain_data,old_collision_array)
                     idx_0 = grain_idx
                     idx_1 = check_grain_idx
                 else
-                    idx_0 = grain_idx
-                    idx_1 = check_grain_idx
+                    idx_1 = grain_idx
+                    idx_0 = check_grain_idx
                 end
                 map_idx_0 = (idx_0-1)*3
                 map_idx_1 = (idx_1-1)*3
@@ -115,13 +115,10 @@ end
 
 function possibleAABBCollisions(aabb_mins,aabb_maxes,aabb_grain_indices,grid)
     num_grid_elems = length(grid.aabbs_in_elem)
-    possible_collisions = Vector{Vector{Int32}}(undef,0)
+    possible_collisions = Set{Array{Int32, 1}}()
 
-    
-    
 
     collision_found = false
-
     for elem = 1:num_grid_elems
         num_aabbs_in_elem = length(grid.aabbs_in_elem[elem])
         if(num_aabbs_in_elem == 0)
@@ -136,20 +133,19 @@ function possibleAABBCollisions(aabb_mins,aabb_maxes,aabb_grain_indices,grid)
                    aabb_mins[aabb_actual_grain_idx][2] < aabb_maxes[aabb_check_actual_grain_idx][2] &&
                    aabb_maxes[aabb_actual_grain_idx][1] > aabb_mins[aabb_check_actual_grain_idx][1] &&
                    aabb_maxes[aabb_actual_grain_idx][2] > aabb_mins[aabb_check_actual_grain_idx][2])
-                    
-                    
-                    found_flag = false
-                    for ii = 1:length(possible_collisions)
-                        if ( (possible_collisions[ii] == [aabb_actual_grain_idx,aabb_check_actual_grain_idx]) || (possible_collisions[ii] == [aabb_check_actual_grain_idx,aabb_actual_grain_idx]))
-                            found_flag = true
-                            break
-                        end
+                   
+                    # Make sure that idx_0 < idx_1
+                    idx_0 = -1
+                    idx_1 = -1
+                    if(aabb_actual_grain_idx < aabb_check_actual_grain_idx)
+                        idx_0 = aabb_actual_grain_idx
+                        idx_1 = aabb_check_actual_grain_idx
+                    else
+                        idx_1 = aabb_actual_grain_idx
+                        idx_0 = aabb_check_actual_grain_idx
                     end
-                    if(found_flag)
-                        continue
-                    end
-                    collision_found = true
-                    push!(possible_collisions,[aabb_actual_grain_idx,aabb_check_actual_grain_idx])
+                    
+                    push!(possible_collisions,[idx_0,idx_1])
                 end
             end
         end
@@ -174,9 +170,12 @@ function finalStateCollisionDetection(grain_data,possible_collisions,old_collisi
     collision_array = Array{Collision,1}()
     num_of_possible_collisions = length(possible_collisions)
     
-    for possible_collision_num = 1:num_of_possible_collisions
-        grain_idx = possible_collisions[possible_collision_num][1]
-        check_grain_idx = possible_collisions[possible_collision_num][2]
+    for collision_check in possible_collisions 
+        #grain_idx = possible_collisions[possible_collision_num][1]
+        #check_grain_idx = possible_collisions[possible_collision_num][2]
+        grain_idx = collision_check[1]
+        check_grain_idx = collision_check[2]
+
         # If both grains are fixed then dont add collision
         if(grain_data.fixed[grain_idx] && grain_data.fixed[check_grain_idx])
             continue
@@ -198,8 +197,8 @@ function finalStateCollisionDetection(grain_data,possible_collisions,old_collisi
                 idx_0 = grain_idx
                 idx_1 = check_grain_idx
             else
-                idx_0 = grain_idx
-                idx_1 = check_grain_idx
+                idx_1 = grain_idx
+                idx_0 = check_grain_idx
             end
             map_idx_0 = (idx_0-1)*3
             map_idx_1 = (idx_1-1)*3
@@ -255,22 +254,32 @@ mutable struct CollisionGrid
     aabbs_in_elem
 end
 
-
-# Collision detection using a grid and axis-aligned bounding boxes
-function detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width, old_collision_array, dt)
-    aabb_mins,aabb_maxes,aabb_grain_indices = generateAABBs(grain_data)
-    #aabbs_in_elem = Vector{Vector{Int32}}(undef,0)
-    num_grid_elems = ((grid_max.+0.00001).-grid_min)./grid_width
-    num_grid_elems = floor.(Int32,num_grid_elems)
+function initAABBVector(num_grid_elems)
     aabbs_in_elem = Vector{Vector{Int32}}(undef,0)
     for ii = 1:num_grid_elems[1]*num_grid_elems[2]
         temp = Vector{Int32}(undef,0)
         push!(aabbs_in_elem,temp)
     end
-    collision_grid = CollisionGrid(grid_min,grid_max,grid_width,num_grid_elems,aabbs_in_elem)
-    gridAABBProjection!(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
-    possible_collisions = possibleAABBCollisions(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
-    collision_array = finalStateCollisionDetection(grain_data,possible_collisions, old_collision_array, dt)
+    return aabbs_in_elem
+end
+
+# Collision detection using a grid and axis-aligned bounding boxes
+function detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width, old_collision_array, dt)
+    println("generate aabb: ")
+    @time aabb_mins,aabb_maxes,aabb_grain_indices = generateAABBs(grain_data)
+    #aabbs_in_elem = Vector{Vector{Int32}}(undef,0)
+    num_grid_elems = ((grid_max.+0.00001).-grid_min)./grid_width
+    num_grid_elems = floor.(Int32,num_grid_elems)
+    println("init aabb_in_elem: ")
+    @time aabbs_in_elem = initAABBVector(num_grid_elems) 
+    println("init collision: ")
+    @time collision_grid = CollisionGrid(grid_min,grid_max,grid_width,num_grid_elems,aabbs_in_elem)
+    println("project aabb: ")
+    @time gridAABBProjection!(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
+    println("possible collision: ")
+    @time possible_collisions = possibleAABBCollisions(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
+    println("final collision: ")
+    @time collision_array = finalStateCollisionDetection(grain_data,possible_collisions, old_collision_array, dt)
     return collision_array
 end
 
