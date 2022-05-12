@@ -3,7 +3,7 @@ include("collisionhandling.jl")
 
 function main(args)
     # Read in grain file info
-    println(args)
+    println(pwd())
     #input_file_name = "bouncetest.csv"
     input_file_name = "grainbox.csv"
     #input_file_name = "frictiontest.csv"
@@ -45,7 +45,7 @@ function main(args)
     #writeOutputVTU("testoutput.vtu",grain_data)
 
     # Begin time integration
-    end_t = 0.1
+    end_t = 0.2
     delta_t = 0.00001
     output_freq = 1000
     
@@ -61,14 +61,16 @@ function main(args)
     ctr = 0
     grid_d_mean = 0.0005*2.0
     grid_min = [-4.0*grid_d_mean -4.0*grid_d_mean]
-    grid_max = [32.0*grid_d_mean 52.0*grid_d_mean]
+    grid_max = [32.0*grid_d_mean 72.0*grid_d_mean]
     grid_width = grid_d_mean*4.0
     old_collision_array = Array{Collision,1}() 
     while t < end_t
         # Detect collisions
-        #@time collisions = detectCollisionsSimple(grain_data,old_collision_array)
         println("=============================================================")
-        collisions = detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width,old_collision_array, delta_t)
+        println("t: ",t)
+        print("collisionssimple: ")
+        @time collisions = detectCollisionsSimple(grain_data,old_collision_array,delta_t)
+        #collisions = detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width,old_collision_array, delta_t)
         println("Collisions: ",length(collisions))
         #println("Collisions:")
         #for ii =1:length(collisions)
@@ -76,7 +78,7 @@ function main(args)
         #end
 
         # Calculate collision forces
-        println("Forces:")
+        print("Forces: ")
         @time forces = calculateCollisionForces!(grain_data, collisions,delta_t)
 
         # Apply gravity

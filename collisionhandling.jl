@@ -15,7 +15,7 @@ end
 
 
 # Brute force collision detection
-function detectCollisionsSimple(grain_data,old_collision_array)
+function detectCollisionsSimple(grain_data,old_collision_array,dt)
     collision_array = Array{Collision,1}()
     for grain_idx = 1:grain_data.num_grains
         for check_grain_idx = grain_idx+1:grain_data.num_grains
@@ -50,25 +50,32 @@ function detectCollisionsSimple(grain_data,old_collision_array)
                 n = normalize(n)
                 pen_depth = (grain_data.r[grain_idx]+grain_data.r[check_grain_idx]) - dist
                 location = [0.5*(grain_data.q[map_idx_1+1] + grain_data.q[map_idx_0+1]) 0.5*(grain_data.q[map_idx_1+2] + grain_data.q[map_idx_0+2]) ]
-                v_0_angular_loc = location - grain_data.q[map_idx_0+1:map_idx_0+2]
+                v_0_angular_loc = location - [grain_data.q[map_idx_0+1] grain_data.q[map_idx_0+2]] 
                 v_0_angular = grain_data.v[map_idx_0+3].*[-v_0_angular_loc[2] v_0_angular_loc[1]]
-                v_0_contact = grain_data.v[map_idx_0+1:map_idx_0+2] + v_0_angular 
-                v_1_angular_loc = location - grain_data.q[map_idx_1+1:map_idx_1+2]
+                v_0_contact = [grain_data.v[map_idx_0+1] grain_data.v[map_idx_0+2]]+ v_0_angular 
+                v_1_angular_loc = location - [grain_data.q[map_idx_1+1] grain_data.q[map_idx_1+2]] 
                 v_1_angular = grain_data.v[map_idx_1+3].*[-v_1_angular_loc[2] v_1_angular_loc[1]]
-                v_1_contact = grain_data.v[map_idx_1+1:map_idx_1+2] + v_1_angular
+                v_1_contact = [grain_data.v[map_idx_1+1] grain_data.v[map_idx_1+2]] + v_1_angular
                 #v_rel = [ (grain_data.v[map_idx_0+1] - grain_data.v[map_idx_1+1]) (grain_data.v[map_idx_0+2] - grain_data.v[map_idx_1+2])]
                 v_rel = v_0_contact - v_1_contact 
                 
                 delta_s = [0.0 0.0]
+                found_old_spring = false
                 for ii = 1:length(old_collision_array)
                     if ( ((old_collision_array[ii].idx_0 == idx_0) && (old_collision_array[ii].idx_1 == idx_1)) || 
                         ((old_collision_array[ii].idx_0 == idx_1) && (old_collision_array[ii].idx_1 == idx_0)) )
                         delta_s = old_collision_array[ii].delta_s + dt*v_rel
                         delta_s -= dot(n,delta_s)*n
+                        found_old_spring = true
                         break
                     end
                 end
-                
+
+                if (!found_old_spring)
+                    delta_s = dt*v_rel
+                    delta_s -= dot(n,delta_s)*n
+                end
+            
                 new_collision = Collision(idx_0,idx_1,n,pen_depth,location,v_rel,delta_s,[0.0,0.0,0.0])
                 push!(collision_array,new_collision)
             end
@@ -265,20 +272,20 @@ end
 
 # Collision detection using a grid and axis-aligned bounding boxes
 function detectCollisionsAABB(grain_data,grid_min,grid_max,grid_width, old_collision_array, dt)
-    println("generate aabb: ")
+    print("generate aabb: ")
     @time aabb_mins,aabb_maxes,aabb_grain_indices = generateAABBs(grain_data)
     #aabbs_in_elem = Vector{Vector{Int32}}(undef,0)
     num_grid_elems = ((grid_max.+0.00001).-grid_min)./grid_width
     num_grid_elems = floor.(Int32,num_grid_elems)
-    println("init aabb_in_elem: ")
+    print("init aabb_in_elem: ")
     @time aabbs_in_elem = initAABBVector(num_grid_elems) 
-    println("init collision: ")
+    print("init collision: ")
     @time collision_grid = CollisionGrid(grid_min,grid_max,grid_width,num_grid_elems,aabbs_in_elem)
-    println("project aabb: ")
+    print("project aabb: ")
     @time gridAABBProjection!(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
-    println("possible collision: ")
+    print("possible collision: ")
     @time possible_collisions = possibleAABBCollisions(aabb_mins,aabb_maxes,aabb_grain_indices,collision_grid)
-    println("final collision: ")
+    print("final collision: ")
     @time collision_array = finalStateCollisionDetection(grain_data,possible_collisions, old_collision_array, dt)
     return collision_array
 end
